@@ -22,7 +22,7 @@ git clone https://github.com/ThibaultR14/PFE-platform-betatesting.git
 cd PFE-platform-betatesting
 pnpm install                 # génère aussi le client Prisma
 cp .env.example .env         # PowerShell : Copy-Item .env.example .env
-docker compose up -d         # Postgres sur le port 5433, bases microbeta et microbeta_test
+docker compose up -d --wait  # attend que Postgres soit prêt (port 5433, bases microbeta et microbeta_test)
 pnpm db:deploy               # applique les migrations sur la base de dev
 pnpm db:seed                 # données de démo (efface et recrée)
 ```
@@ -107,7 +107,7 @@ La CI lance exactement ces commandes sur chaque PR.
 ## 8. Problèmes courants
 
 - **`port is already allocated` sur 5433**, ou Prisma qui ne se connecte pas : un autre Postgres utilise le port. Arrête-le, ou change le port côté hôte dans `docker-compose.yml` **et** dans les deux URL du `.env`.
-- **`database "microbeta_test" does not exist`** : ton volume Docker date d'avant l'ajout de la base de test. Recrée-le (ça efface la base de dev) : `docker compose down -v && docker compose up -d && pnpm db:deploy && pnpm db:seed`.
+- **`database "microbeta_test" does not exist`** : ton volume Docker date d'avant l'ajout de la base de test. Recrée-le (ça efface la base de dev) : `docker compose down -v && docker compose up -d --wait && pnpm db:deploy && pnpm db:seed`.
 - **`Variables d'environnement manquantes : DATABASE_URL`** : le fichier `.env` n'existe pas à la racine. Refais `cp .env.example .env`.
 - **`pnpm` introuvable dans Git Bash** (Windows) : utilise PowerShell, ou `cmd //c "pnpm <commande>"`.
 - **`pnpm test:e2e` : `Executable doesn't exist`** : Chromium n'est pas installé, lance la commande `playwright install chromium` de l'étape 7.
