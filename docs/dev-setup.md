@@ -13,7 +13,7 @@ Si une étape ne marche pas comme écrit ici, corrige ce fichier dans ta PR.
 | Docker Desktop | récent  | `docker compose version` | https://www.docker.com/products/docker-desktop (le lancer avant la suite)                 |
 | Git            | récent  | `git --version`          | https://git-scm.com                                                                       |
 
-Sous Windows, lance les commandes dans **PowerShell**. Dans Git Bash, `pnpm` installé par npm n'est parfois pas trouvé (voir [Problèmes courants](#8-problèmes-courants)).
+Sous Windows, lance les commandes dans **PowerShell**, une ligne à la fois : PowerShell 5.1 (celui livré avec Windows) ne comprend pas `&&`. Dans Git Bash, `pnpm` installé par npm n'est parfois pas trouvé (voir [Problèmes courants](#8-problèmes-courants)).
 
 ## 2. Installer
 
@@ -97,9 +97,11 @@ Autres commandes utiles : `pnpm db:studio` (parcourir la base dans le navigateur
 ```bash
 pnpm test            # tests unitaires (sans BDD)
 pnpm test:int        # tests d'intégration, sur microbeta_test (vidée à chaque run)
-pnpm --filter @microbeta/web exec playwright install chromium   # une seule fois
+pnpm --filter @microbeta/web exec playwright install chromium   # une seule fois (Linux : ajouter --with-deps)
 pnpm test:e2e        # tests de bout en bout du site (Playwright, lance next dev tout seul)
-pnpm lint && pnpm format:check && pnpm typecheck
+pnpm lint
+pnpm format:check
+pnpm typecheck
 ```
 
 La CI lance exactement ces commandes sur chaque PR.
@@ -107,7 +109,7 @@ La CI lance exactement ces commandes sur chaque PR.
 ## 8. Problèmes courants
 
 - **`port is already allocated` sur 5433**, ou Prisma qui ne se connecte pas : un autre Postgres utilise le port. Arrête-le, ou change le port côté hôte dans `docker-compose.yml` **et** dans les deux URL du `.env`.
-- **`database "microbeta_test" does not exist`** : ton volume Docker date d'avant l'ajout de la base de test. Recrée-le (ça efface la base de dev) : `docker compose down -v && docker compose up -d --wait && pnpm db:deploy && pnpm db:seed`.
+- **`database "microbeta_test" does not exist`** : ton volume Docker date d'avant l'ajout de la base de test. Recrée-le (ça efface la base de dev) en lançant, une par une : `docker compose down -v`, `docker compose up -d --wait`, `pnpm db:deploy`, `pnpm db:seed`.
 - **`Variables d'environnement manquantes : DATABASE_URL`** : le fichier `.env` n'existe pas à la racine. Refais `cp .env.example .env`.
 - **`pnpm` introuvable dans Git Bash** (Windows) : utilise PowerShell, ou `cmd //c "pnpm <commande>"`.
 - **`pnpm test:e2e` : `Executable doesn't exist`** : Chromium n'est pas installé, lance la commande `playwright install chromium` de l'étape 7.

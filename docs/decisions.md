@@ -2,6 +2,17 @@
 
 Les entrées les plus récentes sont en haut.
 
+## 2026-11-24 - Actions GitHub en dernière version majeure, E2E dans le job `check`
+
+- Contexte : issue #4. La CI affichait un avertissement de dépréciation de Node 20. L'issue demandait les actions en v5, mais des versions plus récentes existent.
+- Décision :
+  - `actions/checkout@v7`, `pnpm/action-setup@v6`, `actions/setup-node@v7`, `actions/upload-artifact@v7`, toutes sur Node 24. `pnpm/action-setup` lit toujours la version de pnpm dans `packageManager` ;
+  - Playwright (Chromium seul) tourne dans le job `check`. En CI, il teste le build de production (`next build` puis `next start`), et le rapport est envoyé en artefact en cas d'échec.
+- Alternatives écartées :
+  - la v5, déjà dépassée ;
+  - un job `e2e` à part, qui aurait demandé de changer les checks obligatoires de la protection de `main` ;
+  - tester sur `next dev` en CI, ce qui n'est pas ce qui sera déployé.
+
 ## 2026-11-24 - pg-boss 12, files `exclusive`, payloads validés deux fois
 
 - Contexte : issue #3. Les tâches (envois, relances) doivent pouvoir être rejouées sans doublon, et le site et le bot doivent être d'accord sur le format des payloads.
