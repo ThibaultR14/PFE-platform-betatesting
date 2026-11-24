@@ -33,6 +33,7 @@ Le _quoi_ est dans [SPEC.md](SPEC.md). Ce fichier décrit le _comment_.
 | --------------- | --------------------------------------------------------------------------------------------------------- | ----------- |
 | `packages/db`   | Schéma Prisma, migrations, client, données de démo                                                        | web, bot    |
 | `packages/core` | Logique métier pure et testable : calcul du prochain envoi, règles de relance, quotas, transitions d'état | web, bot    |
+| `packages/jobs` | Contrat des tâches pg-boss : noms, payloads Zod, clés anti-doublon, `enqueue()`, `registerWorkers()`      | web, bot    |
 | `packages/ai`   | Prompts, appels LLM, validation Zod, calcul de coût, écriture `AiUsage`                                   | web         |
 | `packages/i18n` | Tous les textes (FR), clés typées                                                                         | web, bot    |
 | `apps/web`      | Interface et API                                                                                          | —           |
@@ -79,7 +80,10 @@ Stripe Checkout, puis webhook `checkout.session.completed` et `customer.subscrip
 ## Fiabilité des tâches
 
 - Chaque tâche relit l'état en BDD avant d'agir et ne fait rien si c'est déjà fait. Elle peut donc tourner deux fois sans doublon.
-- `singletonKey` pg-boss par `assignmentId + type` pour éviter les doublons.
+- Les files pg-boss sont en politique `exclusive` : au plus une tâche en attente ou en cours par `singletonKey`. Chaque tâche a une clé par défaut tirée de son payload (`reminder:<assignmentId>:<n>`, `send-microtest:<assignmentId>`…). Un second envoi avec la même clé renvoie `null`.
+- Le payload est validé par Zod à l'envoi (`enqueue` lève une erreur) et à la réception (la tâche part en échec définitif, sans appeler le handler).
+- Relances pg-boss : 3 nouvelles tentatives après le premier essai (4 au total), avec un délai exponentiel (30 s au départ), sauf pour `scheduler-tick` (cron chaque minute, en UTC, sans relance).
+- pg-boss range ses tables dans le schéma Postgres `pgboss`, à côté du schéma `public` géré par Prisma.
 - Toutes les dates sont stockées en UTC. L'affichage utilise le fuseau `Europe/Paris` (MVP).
 - Rythme d'envoi des messages privés limité côté bot (file avec concurrence réduite) pour rester sous les limites de Discord.
 

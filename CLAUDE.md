@@ -18,6 +18,7 @@ Plateforme de micro-testing : l'IA génère et découpe un plan de test, un bot 
 - `apps/bot` : bot discord.js + tâches pg-boss (envois, relances)
 - `packages/core` : logique métier partagée (planification, quotas, règles de campagne)
 - `packages/i18n` : tous les textes affichés, en français
+- `packages/jobs` : contrat des tâches pg-boss (payloads Zod, `enqueue()`, `registerWorkers()`). Toute nouvelle tâche s'y déclare. Test manuel : lancer le bot, puis `pnpm jobs:send-test`.
 - `packages/db` : Prisma 7, schéma, migrations, données de démo. Importer depuis `@microbeta/db` (`getPrisma()`), jamais depuis `src/generated/`.
 - À venir : `packages/ai` (couche IA, sorties validées par Zod)
 - TypeScript reste en 6.0 : typescript-eslint ne supporte pas encore la 7.

@@ -21,7 +21,8 @@
     "db:migrate": "pnpm --filter @microbeta/db run migrate",
     "db:deploy": "pnpm --filter @microbeta/db run migrate:deploy",
     "db:seed": "pnpm --filter @microbeta/db run seed",
-    "db:studio": "pnpm --filter @microbeta/db run studio"
+    "db:studio": "pnpm --filter @microbeta/db run studio",
+    "jobs:send-test": "pnpm --filter @microbeta/jobs run send-test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
