@@ -2,6 +2,21 @@
 
 Les entrées les plus récentes sont en haut.
 
+## 2026-11-24 - pg-boss 12, files `exclusive`, payloads validés deux fois
+
+- Contexte : issue #3. Les tâches (envois, relances) doivent pouvoir être rejouées sans doublon, et le site et le bot doivent être d'accord sur le format des payloads.
+- Décision :
+  - `packages/jobs` porte le contrat : un schéma Zod par tâche, une `singletonKey` par défaut, `enqueue()` pour le site et `registerWorkers()` pour le bot ;
+  - les files sont créées avec la politique `exclusive` : une seule tâche en attente ou en cours par clé ;
+  - le payload est validé à l'envoi et à la réception. Une tâche invalide reçue part en `deadletter` (échec définitif, sans relance) ;
+  - le bot démarre sans les variables Discord tant que #22 n'est pas fait. `DATABASE_URL` est obligatoire ;
+  - chaque tâche a toujours une clé : en `exclusive`, pg-boss traite l'absence de clé comme une clé vide commune à toute la file. Une tâche planifiée plus tard garde sa clé jusqu'à son exécution, donc « relancer maintenant » (#26) devra passer sa propre clé ;
+  - `ensureQueues` met à jour les relances des files existantes et refuse de démarrer si une file n'est pas `exclusive` (pg-boss ne permet pas de changer la politique d'une file).
+- Alternatives écartées :
+  - la politique `standard`, où une `singletonKey` seule ne garantit pas l'unicité ;
+  - `stately`, qui accepte une tâche en attente en plus d'une tâche en cours, donc un doublon possible pendant un envoi ;
+  - compter uniquement sur la clé : chaque handler relit quand même l'état en BDD avant d'agir.
+
 ## 2026-11-24 - Prisma 7, Postgres local sur le port 5433, tests d'intégration séparés
 
 - Contexte : issue #2. Prisma 7 change la configuration (URL dans `prisma.config.ts`, driver adapter, `.env` qui n'est plus chargé tout seul, seed explicite). Le port 5432 est souvent déjà pris par un Postgres installé sur la machine.
