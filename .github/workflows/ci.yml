@@ -25,9 +25,9 @@ jobs:
     env:
       TEST_DATABASE_URL: postgresql://microbeta:microbeta@localhost:5432/microbeta_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -38,3 +38,13 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm test:int
+      - name: Installer Chromium pour Playwright
+        run: pnpm --filter @microbeta/web exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - name: Rapport Playwright (si échec)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

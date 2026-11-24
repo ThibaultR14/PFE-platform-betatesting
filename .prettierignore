@@ -6,3 +6,5 @@ pnpm-lock.yaml
 coverage
 **/generated
 packages/db/prisma/migrations
+playwright-report
+test-results
