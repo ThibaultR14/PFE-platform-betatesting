@@ -35,9 +35,20 @@ Le `.env` copié marche tel quel pour la base de données. Le reste (Discord, St
 
 Chaque développeur a **son propre bot et son propre serveur de test**, pour ne pas recevoir les messages de l'autre.
 
+Une **application** Discord regroupe le bot (un compte piloté par notre code, qui se connecte avec le token), les slash commands (rattachées à l'Application ID) et la connexion OAuth2 du site. Le **serveur** est à part : le bot n'y agit qu'une fois invité (étape 4).
+
+Pour s'y retrouver, on nomme les trois de la même façon :
+
+| Élément     | Nom                                   |
+| ----------- | ------------------------------------- |
+| Application | `MicroBeta Dev <ton prénom>`          |
+| Bot         | `MicroBeta Bot <ton prénom>`          |
+| Serveur     | `MicroBeta Serveur Test <ton prénom>` |
+
 1. Va sur https://discord.com/developers/applications → **New Application**. Nom : `MicroBeta Dev <ton prénom>`.
 2. Page **General Information** : copie l'**Application ID** → `DISCORD_APPLICATION_ID`.
 3. Onglet **Bot** :
+   - **Username** → `MicroBeta Bot <ton prénom>`, puis **Save Changes** (si le nom est refusé, ajoute un chiffre) ;
    - **Reset Token** → copie le token → `DISCORD_BOT_TOKEN`. Il n'est affiché qu'une fois, et il ne doit **jamais** être commité ni collé dans une issue.
    - Laisse les trois **Privileged Gateway Intents** désactivés : le bot passe par les commandes et les boutons, pas par la lecture des messages.
 4. Onglet **OAuth2** (connexion des porteurs au site) :
@@ -47,13 +58,14 @@ Chaque développeur a **son propre bot et son propre serveur de test**, pour ne 
 
 ## 4. Créer son serveur de test et y inviter le bot
 
-1. Dans Discord : **+** (ajouter un serveur) → **Créer le mien** → **Pour moi et mes amis**. Nom : `MicroBeta Test <ton prénom>`.
-2. Active le mode développeur : **Paramètres utilisateur → Avancés → Mode développeur**.
+1. Dans l'application Discord (pas sur le Developer Portal) : **+** en bas de la colonne des serveurs (ajouter un serveur) → **Créer le mien** → **Pour moi et mes amis**. Nom : `MicroBeta Serveur Test <ton prénom>`.
+2. Active le mode développeur : **Paramètres utilisateur (⚙️) → Avancés → Mode développeur**.
 3. Clic droit sur l'icône du serveur → **Copier l'identifiant du serveur** → `DISCORD_HUB_GUILD_ID`.
 4. Invite le bot : Developer Portal → **OAuth2 → URL Generator** :
-   - scopes `bot` et `applications.commands` ;
-   - permissions `View Channels`, `Send Messages`, `Embed Links`, `Read Message History` ;
-   - ouvre l'URL générée et choisis ton serveur de test.
+   - scopes `bot` et `applications.commands` (sans ce dernier, `/aide` n'apparaît pas) ;
+   - si la liste **Integration Type** est affichée : **Guild Install** ;
+   - permissions `View Channels`, `Send Messages`, `Embed Links`, `Read Message History` (en français : Voir les salons, Envoyer des messages, Intégrer des liens, Voir les anciens messages) ;
+   - ouvre l'URL générée et choisis ton serveur de test. Le bot apparaît dans les membres, hors ligne tant qu'il n'est pas lancé.
 
 ## 5. Remplir `.env`
 
@@ -82,6 +94,12 @@ Ce que tu dois voir :
 - le site sur http://localhost:3000 : le nom « MicroBeta » et son accroche ;
 - dans le terminal, le log du bot : `[bot] workers pg-boss démarrés…`. La mention « sans Discord » est normale tant que les variables `DISCORD_*` sont vides.
 
+Une fois les trois variables `DISCORD_*` remplies :
+
+- le log affiche aussi `[bot] Bot connecté en tant que <nom du bot>`, et le bot apparaît en ligne sur ton serveur de test ;
+- `/aide` répond, sur le serveur comme en message privé au bot. La réponse n'est visible que par toi. La première fois, la commande peut mettre quelques minutes à apparaître dans Discord (redémarre Discord avec Ctrl+R si besoin) ;
+- si le log affiche `Connexion à Discord impossible`, le token ou l'Application ID est faux : refais l'étape 3.
+
 Pour vérifier que le bot reçoit bien les tâches, lance dans un **second terminal** :
 
 ```bash
@@ -91,6 +109,19 @@ pnpm jobs:send-test
 Le premier terminal doit afficher `[jobs] send-welcome reçue …`.
 
 Autres commandes utiles : `pnpm db:studio` (parcourir la base dans le navigateur), `pnpm --filter @microbeta/web dev` (le site seul).
+
+### Lancer et arrêter le bot
+
+Postgres doit tourner (`docker compose up -d --wait`).
+
+| Besoin                                            | Commande                             |
+| ------------------------------------------------- | ------------------------------------ |
+| Bot seul, redémarré à chaque modification du code | `pnpm --filter @microbeta/bot dev`   |
+| Site et bot ensemble                              | `pnpm dev`                           |
+| Bot seul, sans redémarrage automatique            | `pnpm --filter @microbeta/bot start` |
+| Arrêter                                           | **Ctrl+C** dans son terminal         |
+
+Ctrl+C affiche `[bot] SIGINT reçu, arrêt en cours…` : le bot se déconnecte de Discord, puis arrête pg-boss. S'il bloque plus de 15 s, il sort tout seul. Ne lance qu'un bot à la fois : deux process avec le même token répondraient tous les deux aux commandes.
 
 ## 7. Tester
 
