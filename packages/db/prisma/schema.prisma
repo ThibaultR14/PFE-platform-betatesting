@@ -1,0 +1,284 @@
+// Schéma MicroBeta : voir docs/SPEC.md (Modèle de données) et docs/architecture.md.
+// Toute modification se fait dans une PR à part, annoncée à l'autre membre de l'équipe.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Enums ----------
+
+enum Plan {
+  FREE
+  PRO
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  DONE
+}
+
+enum QuestionType {
+  TEXT
+  RATING
+  SINGLE
+  MULTI
+  YESNO
+}
+
+enum TesterSource {
+  INVITE_LINK
+  GUILD
+}
+
+enum TesterStatus {
+  INVITED
+  ACTIVE
+  PAUSED
+  INACTIVE
+  UNREACHABLE
+  OPTED_OUT
+}
+
+enum AssignmentStatus {
+  SCHEDULED
+  SENT
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum AnswerChannel {
+  DISCORD
+  WEB
+}
+
+enum TesterQuestionStatus {
+  OPEN
+  ANSWERED
+}
+
+enum AiUsageKind {
+  GENERATE
+  SPLIT
+}
+
+enum OutboundKind {
+  WELCOME
+  MICROTEST
+  REMINDER
+  REPLY
+  FALLBACK_EMAIL
+}
+
+enum OutboundStatus {
+  SENT
+  FAILED
+}
+
+// ---------- Porteur ----------
+
+model User {
+  id                   String     @id @default(cuid())
+  discordId            String     @unique
+  name                 String
+  email                String?
+  avatarUrl            String?
+  plan                 Plan       @default(FREE)
+  stripeCustomerId     String?    @unique
+  stripeSubscriptionId String?    @unique
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  campaigns            Campaign[]
+  aiUsages             AiUsage[]
+}
+
+// ---------- Campagne et corpus ----------
+
+model Campaign {
+  id                 String         @id @default(cuid())
+  ownerId            String
+  owner              User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name               String
+  productDescription String
+  productUrl         String?
+  welcomeMessage     String?
+  deadline           DateTime?
+  status             CampaignStatus @default(DRAFT)
+  cadenceHours       Int            @default(48)
+  reminder1Hours     Int            @default(24)
+  reminder2Hours     Int            @default(72)
+  inviteCode         String         @unique
+  discordGuildId     String?
+  announceChannelId  String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  microTests         MicroTest[]
+  testers            Tester[]
+  aiUsages           AiUsage[]
+
+  @@index([ownerId])
+}
+
+model MicroTest {
+  id               String       @id @default(cuid())
+  campaignId       String
+  campaign         Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  position         Int
+  title            String
+  instructions     String?
+  estimatedMinutes Int          @default(5)
+  archivedAt       DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  questions        Question[]
+  assignments      Assignment[]
+
+  @@index([campaignId, position])
+}
+
+model Question {
+  id          String       @id @default(cuid())
+  microTestId String
+  microTest   MicroTest    @relation(fields: [microTestId], references: [id], onDelete: Cascade)
+  position    Int
+  type        QuestionType
+  prompt      String
+  /// Choix possibles pour SINGLE / MULTI : string[]
+  options     Json?
+  required    Boolean      @default(true)
+  /// Incrémentée quand la question est modifiée après avoir été posée.
+  version     Int          @default(1)
+  archivedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  answers     Answer[]
+
+  @@index([microTestId, position])
+}
+
+/// Banque de questions types insérables dans un corpus.
+model QuestionTemplate {
+  id        String       @id @default(cuid())
+  type      QuestionType
+  prompt    String
+  options   Json?
+  category  String
+  createdAt DateTime     @default(now())
+}
+
+// ---------- Testeurs ----------
+
+model Tester {
+  id               String           @id @default(cuid())
+  campaignId       String
+  campaign         Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  discordUserId    String
+  displayName      String
+  email            String?
+  source           TesterSource
+  status           TesterStatus     @default(INVITED)
+  consentAt        DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  assignments      Assignment[]
+  questions        TesterQuestion[]
+  outboundMessages OutboundMessage[]
+
+  @@unique([campaignId, discordUserId])
+  @@index([campaignId, status])
+}
+
+model Assignment {
+  id                 String           @id @default(cuid())
+  testerId           String
+  tester             Tester           @relation(fields: [testerId], references: [id], onDelete: Cascade)
+  microTestId        String
+  /// NoAction : on archive un micro-test déjà envoyé (archivedAt), on ne le supprime pas.
+  /// ⚠ FK rendue DEFERRABLE INITIALLY DEFERRED à la main dans la migration init (Prisma ne sait pas l'exprimer) :
+  /// c'est ce qui permet de supprimer une campagne. Toute migration qui recrée cette FK doit remettre ce DEFERRABLE.
+  microTest          MicroTest        @relation(fields: [microTestId], references: [id], onDelete: NoAction)
+  status             AssignmentStatus @default(SCHEDULED)
+  scheduledAt        DateTime
+  sentAt             DateTime?
+  completedAt        DateTime?
+  reminderCount      Int              @default(0)
+  lastReminderAt     DateTime?
+  currentQuestionIdx Int              @default(0)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  answers            Answer[]
+
+  @@unique([testerId, microTestId])
+  @@index([status, scheduledAt])
+}
+
+model Answer {
+  id               String        @id @default(cuid())
+  assignmentId     String
+  assignment       Assignment    @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  questionId       String
+  /// NoAction : supprimer une question déjà répondue doit échouer (on l'archive), pour ne jamais perdre de réponses.
+  /// ⚠ FK DEFERRABLE INITIALLY DEFERRED ajoutée à la main dans la migration init : voir Assignment.microTest.
+  question         Question      @relation(fields: [questionId], references: [id], onDelete: NoAction)
+  /// Copie de la question telle que posée : { type, prompt, options, version }
+  questionSnapshot Json
+  /// TEXT: string · RATING: number · SINGLE: string · MULTI: string[] · YESNO: boolean
+  value            Json
+  channel          AnswerChannel
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@unique([assignmentId, questionId])
+  @@index([questionId])
+}
+
+model TesterQuestion {
+  id        String               @id @default(cuid())
+  testerId  String
+  tester    Tester               @relation(fields: [testerId], references: [id], onDelete: Cascade)
+  body      String
+  reply     String?
+  repliedAt DateTime?
+  status    TesterQuestionStatus @default(OPEN)
+  createdAt DateTime             @default(now())
+
+  @@index([testerId, status])
+}
+
+// ---------- Suivi ----------
+
+model AiUsage {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignId   String?
+  campaign     Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  kind         AiUsageKind
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  costUsd      Decimal     @db.Decimal(10, 6)
+  createdAt    DateTime    @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model OutboundMessage {
+  id        String         @id @default(cuid())
+  testerId  String
+  tester    Tester         @relation(fields: [testerId], references: [id], onDelete: Cascade)
+  kind      OutboundKind
+  status    OutboundStatus
+  error     String?
+  createdAt DateTime       @default(now())
+
+  @@index([testerId])
+  @@index([status, createdAt])
+}

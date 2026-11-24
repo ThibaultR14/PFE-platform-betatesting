@@ -2,6 +2,22 @@
 
 Les entrées les plus récentes sont en haut.
 
+## 2026-11-24 - Prisma 7, Postgres local sur le port 5433, tests d'intégration séparés
+
+- Contexte : issue #2. Prisma 7 change la configuration (URL dans `prisma.config.ts`, driver adapter, `.env` qui n'est plus chargé tout seul, seed explicite). Le port 5432 est souvent déjà pris par un Postgres installé sur la machine.
+- Décision :
+  - Prisma 7.10 avec `@prisma/adapter-pg` ; le client est généré dans `packages/db/src/generated/` et n'est pas versionné ;
+  - Docker Compose expose Postgres sur le port **5433**, avec deux bases : `microbeta` (dev) et `microbeta_test` ;
+  - les tests d'intégration (`*.int.test.ts`, `pnpm test:int`) tournent sur `TEST_DATABASE_URL`, avec un garde-fou qui exige « test » dans le nom de la base ;
+  - le seed vide et recrée les données, peut être relancé sans risque, et refuse `NODE_ENV=production` ;
+  - pas de tables Auth.js pour l'instant (à trancher dans #5) ;
+  - `Answer → Question` et `Assignment → MicroTest` sont en `NO ACTION` et **`DEFERRABLE INITIALLY DEFERRED`** (ajouté à la main dans la migration init, car Prisma ne sait pas l'exprimer). Une question répondue ou un micro-test envoyé ne peut pas être supprimé, on l'archive, ce qui garantit qu'aucune réponse ne se perd. Supprimer une campagne reste possible, parce que le contrôle se fait au commit, après les cascades. Sans le `DEFERRABLE`, Postgres refuse la suppression de la campagne (vérifié par un test d'intégration). Une migration future qui recrée ces FK doit remettre ce `DEFERRABLE`.
+- Alternatives écartées :
+  - Prisma 6, qui ne serait bientôt plus maintenu ;
+  - Drizzle, moins familier, pour un gain faible ici ;
+  - le port 5432, en conflit sur la machine de Thibault ;
+  - les tests d'intégration dans `pnpm test`, qui le rendraient lent et dépendant de Docker.
+
 ## 2026-11-24 - Organisation à deux : board GitHub Projects et pistes
 
 - Contexte : deux développeurs travaillent en parallèle, et il faut savoir qui fait quoi.

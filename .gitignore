@@ -9,6 +9,8 @@ out/
 .turbo/
 *.tsbuildinfo
 next-env.d.ts
+# client Prisma généré (pnpm db:generate)
+packages/db/src/generated/
 
 # tests
 coverage/

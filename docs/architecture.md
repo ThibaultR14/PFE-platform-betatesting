@@ -85,20 +85,40 @@ Stripe Checkout, puis webhook `checkout.session.completed` et `customer.subscrip
 
 ## Schéma de BDD
 
-Voir la section _Modèle de données_ de [SPEC.md](SPEC.md). Le schéma qui fait foi est `packages/db/prisma/schema.prisma`, créé par l'issue Socle commun.
+Le schéma qui fait foi est [`packages/db/prisma/schema.prisma`](../packages/db/prisma/schema.prisma). Le résumé est dans la section _Modèle de données_ de [SPEC.md](SPEC.md).
 
-Les index à prévoir :
+**Index :**
 
 - `Assignment(status, scheduledAt)` pour le scheduler ;
 - `Tester(campaignId, status)` ;
 - `Answer(questionId)` pour les agrégats ;
-- `AiUsage(userId, createdAt)` pour les quotas mensuels.
+- `AiUsage(userId, createdAt)` pour les quotas mensuels ;
+- `MicroTest(campaignId, position)` et `Question(microTestId, position)`.
+
+**Unicités qui empêchent les doublons quand une tâche est rejouée :**
+
+- `Tester(campaignId, discordUserId)` ;
+- `Assignment(testerId, microTestId)` ;
+- `Answer(assignmentId, questionId)` : une réponse modifiée remplace l'ancienne.
+
+**Suppressions :**
+
+- supprimer une campagne supprime tout ce qui en dépend ;
+- supprimer un testeur supprime ses assignments, réponses, questions et le journal de ses messages (RGPD) ;
+- `AiUsage.campaignId` passe à `SET NULL` quand la campagne est supprimée, pour garder l'historique des coûts.
+
+**Client :**
+
+- `@microbeta/db` exporte `getPrisma()` (singleton) et `createPrismaClient(url)` ;
+- Prisma 7 utilise le driver adapter `@prisma/adapter-pg` ;
+- le client est généré dans `packages/db/src/generated/` (non versionné, recréé au `postinstall`).
 
 ## Environnements
 
-| Env   | Web        | Bot                                    | BDD                         |
-| ----- | ---------- | -------------------------------------- | --------------------------- |
-| local | `pnpm dev` | `pnpm dev` (bot de test Discord dédié) | Postgres via Docker Compose |
-| prod  | Vercel     | Railway service                        | Railway Postgres            |
+| Env   | Web        | Bot                                    | BDD                                                                                     |
+| ----- | ---------- | -------------------------------------- | --------------------------------------------------------------------------------------- |
+| local | `pnpm dev` | `pnpm dev` (bot de test Discord dédié) | Docker Compose, port 5433 : `microbeta` (dev) et `microbeta_test` (tests d'intégration) |
+| CI    | —          | —                                      | service Postgres GitHub Actions (`microbeta_test`)                                      |
+| prod  | Vercel     | Railway service                        | Railway Postgres                                                                        |
 
 Chaque dev a **son propre bot Discord de test** et son propre serveur de test, pour ne pas se marcher dessus.

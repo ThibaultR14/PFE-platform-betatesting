@@ -4,13 +4,13 @@ Plateforme de micro-testing : l'IA génère et découpe un plan de test, un bot 
 
 ## Commandes
 
-- install : `pnpm install` (puis `cp .env.example .env` et `docker compose up -d` pour Postgres)
+- install : `pnpm install`, `cp .env.example .env`, `docker compose up -d` (Postgres sur le port **5433**)
 - dev : `pnpm dev` (web + bot via Turborepo) — un seul : `pnpm --filter @microbeta/web dev`
-- test : `pnpm test` (Vitest, toutes les apps et paquets)
+- test : `pnpm test` (unitaires, sans BDD) · `pnpm test:int` (`*.int.test.ts`, sur `TEST_DATABASE_URL`, qui est vidée à chaque run)
 - lint : `pnpm lint` (ESLint) et `pnpm format:check` (Prettier) — corriger : `pnpm lint:fix && pnpm format`
 - typecheck : `pnpm typecheck`
 - build : `pnpm build`
-- migrations BDD : TODO (issue schéma Prisma)
+- BDD : `pnpm db:migrate --name <nom>` (nouvelle migration) · `pnpm db:deploy` · `pnpm db:seed` (efface et recrée les données de démo) · `pnpm db:studio` · `pnpm db:generate`
 
 ## Structure
 
@@ -18,7 +18,8 @@ Plateforme de micro-testing : l'IA génère et découpe un plan de test, un bot 
 - `apps/bot` : bot discord.js + tâches pg-boss (envois, relances)
 - `packages/core` : logique métier partagée (planification, quotas, règles de campagne)
 - `packages/i18n` : tous les textes affichés, en français
-- À venir : `packages/db` (schéma Prisma et client), `packages/ai` (couche IA, sorties validées par Zod)
+- `packages/db` : Prisma 7, schéma, migrations, données de démo. Importer depuis `@microbeta/db` (`getPrisma()`), jamais depuis `src/generated/`.
+- À venir : `packages/ai` (couche IA, sorties validées par Zod)
 - TypeScript reste en 6.0 : typescript-eslint ne supporte pas encore la 7.
 
 ## Conventions
