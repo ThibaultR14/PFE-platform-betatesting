@@ -15,11 +15,18 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:int": "vitest run --config vitest.int.config.ts",
+    "db:generate": "pnpm --filter @microbeta/db run generate",
+    "db:migrate": "pnpm --filter @microbeta/db run migrate",
+    "db:deploy": "pnpm --filter @microbeta/db run migrate:deploy",
+    "db:seed": "pnpm --filter @microbeta/db run seed",
+    "db:studio": "pnpm --filter @microbeta/db run studio"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.6",
+    "dotenv": "^18.0.10",
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
