@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:int": "vitest run --config vitest.int.config.ts",
+    "test:e2e": "pnpm --filter @microbeta/web run test:e2e",
     "db:generate": "pnpm --filter @microbeta/db run generate",
     "db:migrate": "pnpm --filter @microbeta/db run migrate",
     "db:deploy": "pnpm --filter @microbeta/db run migrate:deploy",

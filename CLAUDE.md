@@ -4,9 +4,9 @@ Plateforme de micro-testing : l'IA génère et découpe un plan de test, un bot 
 
 ## Commandes
 
-- install : `pnpm install`, `cp .env.example .env`, `docker compose up -d` (Postgres sur le port **5433**)
+- install : `pnpm install`, `cp .env.example .env`, `docker compose up -d --wait` (Postgres sur le port **5433**). Guide complet : docs/dev-setup.md
 - dev : `pnpm dev` (web + bot via Turborepo) — un seul : `pnpm --filter @microbeta/web dev`
-- test : `pnpm test` (unitaires, sans BDD) · `pnpm test:int` (`*.int.test.ts`, sur `TEST_DATABASE_URL`, qui est vidée à chaque run)
+- test : `pnpm test` (unitaires, sans BDD) · `pnpm test:int` (`*.int.test.ts`, sur `TEST_DATABASE_URL`, qui est vidée à chaque run) · `pnpm test:e2e` (Playwright, `apps/web/e2e`)
 - lint : `pnpm lint` (ESLint) et `pnpm format:check` (Prettier) — corriger : `pnpm lint:fix && pnpm format`
 - typecheck : `pnpm typecheck`
 - build : `pnpm build`

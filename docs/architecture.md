@@ -119,10 +119,10 @@ Le schéma qui fait foi est [`packages/db/prisma/schema.prisma`](../packages/db/
 
 ## Environnements
 
-| Env   | Web        | Bot                                    | BDD                                                                                     |
-| ----- | ---------- | -------------------------------------- | --------------------------------------------------------------------------------------- |
-| local | `pnpm dev` | `pnpm dev` (bot de test Discord dédié) | Docker Compose, port 5433 : `microbeta` (dev) et `microbeta_test` (tests d'intégration) |
-| CI    | —          | —                                      | service Postgres GitHub Actions (`microbeta_test`)                                      |
-| prod  | Vercel     | Railway service                        | Railway Postgres                                                                        |
+| Env   | Web                                 | Bot                                    | BDD                                                                                     |
+| ----- | ----------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------- |
+| local | `pnpm dev`                          | `pnpm dev` (bot de test Discord dédié) | Docker Compose, port 5433 : `microbeta` (dev) et `microbeta_test` (tests d'intégration) |
+| CI    | `next build` + `start` (Playwright) | —                                      | service Postgres GitHub Actions (`microbeta_test`)                                      |
+| prod  | Vercel                              | Railway service                        | Railway Postgres                                                                        |
 
-Chaque dev a **son propre bot Discord de test** et son propre serveur de test, pour ne pas se marcher dessus.
+Chaque dev a **son propre bot Discord de test** et son propre serveur de test, pour ne pas se marcher dessus. Installation pas à pas : [dev-setup.md](dev-setup.md).
