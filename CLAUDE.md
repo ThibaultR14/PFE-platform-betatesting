@@ -36,7 +36,7 @@ Plateforme de micro-testing : l'IA génère et découpe un plan de test, un bot 
 
 - **Ne jamais ajouter Claude comme co-auteur** : pas de ligne `Co-Authored-By: Claude`, ni de mention « Generated with Claude Code », dans les commits comme dans les PR.
 - Messages de commit en français, au format Conventional Commits (`feat:`, `fix:`, `chore:`…).
-- Ne jamais pousser directement sur `main` : tout passe par une PR relue par l'autre membre de l'équipe.
+- Ne jamais pousser directement sur `main` : tout passe par une PR, avec la CI `check` au vert. La relecture par l'autre membre de l'équipe est conseillée mais pas obligatoire : chacun peut merger sa propre PR.
 
 ## Workflow
 
