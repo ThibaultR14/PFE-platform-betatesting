@@ -11,7 +11,8 @@
   "dependencies": {
     "@microbeta/core": "workspace:*",
     "@microbeta/i18n": "workspace:*",
-    "@microbeta/jobs": "workspace:*"
+    "@microbeta/jobs": "workspace:*",
+    "discord.js": "^14.28.1"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

@@ -2,6 +2,21 @@
 
 Les entrées les plus récentes sont en haut.
 
+## 2026-11-24 - Bot : intent `Guilds` seul, slash commands globales enregistrées au démarrage
+
+- Contexte : issue #22. Les testeurs utiliseront les commandes en message privé avec le bot, et #29 les utilisera sur le serveur du porteur. La SPEC exige d'éviter les autorisations sensibles (risque n° 3).
+- Décision :
+  - discord.js 14, avec l'intent `Guilds` seul. Les slash commands et les boutons arrivent par les interactions, qui ne demandent pas d'intent. Aucun intent privilégié ;
+  - commandes **globales**, déclarées pour les contextes `Guild` et `BotDM` ;
+  - enregistrées à chaque démarrage par un `PUT` qui remplace toute la liste : pas de doublon, et une commande retirée du code disparaît de Discord ;
+  - nom et description des commandes dans `packages/i18n`, réponses éphémères ;
+  - Discord se connecte avant pg-boss : un token refusé arrête le bot avant qu'il ne prenne des tâches. Sans aucune variable `DISCORD_*`, le bot tourne toujours en pg-boss seul ;
+  - arrêt sur SIGINT/SIGTERM : Discord, puis pg-boss, avec une sortie forcée au bout de 15 s.
+- Alternatives écartées :
+  - des commandes limitées au serveur de test, qui ne marchent pas en message privé ;
+  - un script d'enregistrement séparé, qu'il faudrait penser à lancer après chaque changement ;
+  - l'intent `MessageContent` pour lire les messages libres, qui est privilégié et hors scope (pas d'IA sur les messages des testeurs).
+
 ## 2026-11-24 - Actions GitHub en dernière version majeure, E2E dans le job `check`
 
 - Contexte : issue #4. La CI affichait un avertissement de dépréciation de Node 20. L'issue demandait les actions en v5, mais des versions plus récentes existent.
