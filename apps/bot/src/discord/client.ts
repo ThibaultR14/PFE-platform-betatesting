@@ -1,8 +1,9 @@
 import { t } from "@microbeta/i18n";
 import { Client, Events, GatewayIntentBits, REST } from "discord.js";
 import type { DiscordConfig } from "../config";
+import { buttonMap, type BotButton } from "./buttons";
 import { commandMap, type BotCommand } from "./commands";
-import { handleCommand } from "./interactions";
+import { handleButton, handleCommand } from "./interactions";
 import { registerCommands } from "./register";
 
 /**
@@ -18,8 +19,10 @@ export const INTENTS = [GatewayIntentBits.Guilds] as const;
 export async function startDiscord(
   config: DiscordConfig,
   commands: readonly BotCommand[],
+  buttons: readonly BotButton[],
 ): Promise<Client> {
   const byName = commandMap(commands);
+  const byPrefix = buttonMap(buttons);
 
   const rest = new REST().setToken(config.token);
   await registerCommands(rest, config.applicationId, commands);
@@ -29,8 +32,8 @@ export async function startDiscord(
     console.log(`[bot] ${t("bot.ready", { tag: ready.user.tag })}`);
   });
   client.on(Events.InteractionCreate, (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
-    void handleCommand(interaction, byName);
+    if (interaction.isChatInputCommand()) void handleCommand(interaction, byName);
+    else if (interaction.isButton()) void handleButton(interaction, byPrefix);
   });
   client.on(Events.Error, (error) => console.error("[discord]", error));
 

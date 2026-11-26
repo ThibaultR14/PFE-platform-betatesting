@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
     "start": "tsx --env-file-if-exists=../../.env src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "welcome:test": "tsx --env-file-if-exists=../../.env scripts/welcome-test.ts"
   },
   "dependencies": {
     "@microbeta/core": "workspace:*",
+    "@microbeta/db": "workspace:*",
     "@microbeta/i18n": "workspace:*",
     "@microbeta/jobs": "workspace:*",
     "discord.js": "^14.28.1"

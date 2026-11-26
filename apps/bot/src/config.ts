@@ -8,6 +8,11 @@ export interface BotConfig {
   databaseUrl: string;
   /** `null` tant que les variables Discord ne sont pas toutes renseignées (branché dans #22). */
   discord: DiscordConfig | null;
+  /**
+   * URL publique du site, sans `/` final (`PUBLIC_WEB_URL`), pour les liens envoyés aux testeurs
+   * (page de confidentialité…). `null` si elle n'est pas renseignée : les liens sont alors omis.
+   */
+  webUrl: string | null;
 }
 
 const DISCORD_VARS = {
@@ -27,9 +32,11 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     throw new Error("Variables d'environnement manquantes : DATABASE_URL");
   }
 
+  const webUrl = parseWebUrl(env.PUBLIC_WEB_URL);
+
   const missing = Object.values(DISCORD_VARS).filter((name) => !env[name]);
   if (missing.length === Object.keys(DISCORD_VARS).length) {
-    return { databaseUrl, discord: null };
+    return { databaseUrl, discord: null, webUrl };
   }
   if (missing.length > 0) {
     throw new Error(`Variables d'environnement manquantes : ${missing.join(", ")}`);
@@ -42,5 +49,21 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       applicationId: env[DISCORD_VARS.applicationId] ?? "",
       hubGuildId: env[DISCORD_VARS.hubGuildId] ?? "",
     },
+    webUrl,
   };
+}
+
+/** Valide `PUBLIC_WEB_URL` (http ou https) et retire le `/` final. Une valeur vide vaut `null`. */
+function parseWebUrl(value: string | undefined): string | null {
+  if (!value) return null;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`PUBLIC_WEB_URL invalide : "${value}" (ex. http://localhost:3000)`);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(`PUBLIC_WEB_URL doit commencer par http:// ou https:// : "${value}"`);
+  }
+  return value.replace(/\/+$/, "");
 }
