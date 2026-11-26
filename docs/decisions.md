@@ -2,6 +2,18 @@
 
 Les entrées les plus récentes sont en haut.
 
+## 2026-11-26 - Accord du testeur uniquement par le bouton Discord
+
+- Contexte : issue #23. Le testeur arrive soit par le lien d'invitation (page web), soit par le serveur du porteur (bouton « Participer »). Il faut un seul point où l'accord est enregistré.
+- Décision :
+  - `consentAt` n'est renseigné **que** par le clic sur « J'accepte de participer » dans le message privé d'accueil, quelle que soit la voie d'arrivée. La page web du lien d'invitation crée le `Tester` en `INVITED`, sans `consentAt`, puis lance `send-welcome` ;
+  - le clic passe le testeur en `ACTIVE` et planifie son premier micro-test, dans une transaction. Une mise à jour conditionnelle (`INVITED` et `consentAt` vide) et la contrainte unique d'`Assignment` garantissent un seul assignment, même en cas de double clic ;
+  - `send-welcome` ne renvoie rien si un accueil est déjà enregistré comme envoyé (`OutboundMessage`), si le testeur n'est plus `INVITED` ou si la campagne n'est pas `ACTIVE`. Messages privés fermés : échec enregistré, sans nouvel essai ;
+  - le lien de confidentialité du message vaut `${PUBLIC_WEB_URL}/confidentialite`. `PUBLIC_WEB_URL` est facultative : sans elle, le lien est omis et le bot l'indique au démarrage.
+- Alternatives écartées :
+  - un accord donné sur la page web pour le lien d'invitation : deux chemins à maintenir, et rien ne prouve que le bot peut écrire en privé au testeur ;
+  - réutiliser `AUTH_URL` pour les liens : c'est une variable d'Auth.js côté site, que le bot n'a pas sur Railway.
+
 ## 2026-11-24 - Bot : intent `Guilds` seul, slash commands globales enregistrées au démarrage
 
 - Contexte : issue #22. Les testeurs utiliseront les commandes en message privé avec le bot, et #29 les utilisera sur le serveur du porteur. La SPEC exige d'éviter les autorisations sensibles (risque n° 3).

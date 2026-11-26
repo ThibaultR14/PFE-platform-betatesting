@@ -76,6 +76,7 @@ Pour s'y retrouver, on nomme les trois de la même façon :
 | `AUTH_URL`                                                            | déjà bonne (`http://localhost:3000`)                                       | —                                                                                                          |
 | `AUTH_DISCORD_ID`, `AUTH_DISCORD_SECRET`                              | étape 3.4                                                                  | avec la connexion (#5)                                                                                     |
 | `DISCORD_BOT_TOKEN`, `DISCORD_APPLICATION_ID`, `DISCORD_HUB_GUILD_ID` | étapes 3 et 4                                                              | avec la connexion du bot (#22). **Toutes ou aucune** : le bot refuse de démarrer s'il n'en a qu'une partie |
+| `PUBLIC_WEB_URL`                                                      | déjà bonne (`http://localhost:3000`)                                       | facultative : sans elle, les messages du bot n'ont pas de lien de confidentialité                          |
 | `STRIPE_*`                                                            | dashboard Stripe en mode test                                              | avec les paiements (#18)                                                                                   |
 | `ANTHROPIC_API_KEY`                                                   | console Anthropic                                                          | avec la génération IA (#9)                                                                                 |
 | `TESTER_LINK_SECRET`                                                  | chaîne longue et aléatoire, comme `AUTH_SECRET`                            | avec la page web testeur (#17)                                                                             |
@@ -106,7 +107,19 @@ Pour vérifier que le bot reçoit bien les tâches, lance dans un **second termi
 pnpm jobs:send-test
 ```
 
-Le premier terminal doit afficher `[jobs] send-welcome reçue …`.
+Le premier terminal doit afficher `[jobs] send-welcome … : unknownTester` : la tâche est bien reçue, mais le testeur de test n'existe pas. Sans les variables `DISCORD_*`, elle échoue avec `Discord n'est pas configuré`, ce qui est normal.
+
+### Tester l'accueil d'un testeur
+
+Il faut les variables `DISCORD_*`, les données de démo (`pnpm db:seed`) et le bot lancé. Ton compte Discord doit être sur ton serveur de test, avec les messages privés autorisés. Pour trouver ton Discord ID : Paramètres > Avancés > Mode développeur, puis clic droit sur ton profil > Copier l'identifiant.
+
+```bash
+pnpm --filter @microbeta/bot welcome:test <ton Discord ID> --reset
+```
+
+- Le bot t'envoie en privé le message d'accueil de la campagne de démo, avec le bouton « J'accepte de participer ».
+- Au clic, le bouton disparaît et une confirmation s'ajoute au message. Dans `pnpm db:studio`, ton testeur (« Testeur manuel ») passe `ACTIVE`, avec un `Assignment` `SCHEDULED`.
+- Relancé **sans** `--reset`, le script ne provoque aucun second message (log `notInvited` ou `alreadySent`).
 
 Autres commandes utiles : `pnpm db:studio` (parcourir la base dans le navigateur), `pnpm --filter @microbeta/web dev` (le site seul).
 

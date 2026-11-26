@@ -1,23 +1,37 @@
+import { createPrismaClient, type PrismaClient } from "@microbeta/db";
 import { createBoss, registerWorkers, scheduleTick, startBoss } from "@microbeta/jobs";
 import type { Client } from "discord.js";
 import { loadConfig, type DiscordConfig } from "./config";
+import { createButtons } from "./discord/buttons";
 import { startDiscord } from "./discord/client";
 import { commands } from "./discord/commands";
-import { loggingHandlers } from "./jobs";
+import { discordDmSender } from "./discord/dm";
+import { createJobHandlers } from "./jobs";
 import { createShutdown, type ShutdownStep } from "./shutdown";
 
 // Point d'entrée du bot : connecte Discord (si configuré), puis démarre pg-boss et les workers.
-// Les handlers ne font que loguer pour l'instant.
 const config = loadConfig();
+if (!config.webUrl) {
+  console.warn(
+    "[bot] PUBLIC_WEB_URL absente : les messages aux testeurs n'auront pas de lien vers le site (confidentialité…).",
+  );
+}
+
+const prisma = createPrismaClient(config.databaseUrl);
 
 // Discord d'abord : un token refusé arrête le bot avant qu'il ne prenne des tâches.
-const discord = config.discord ? await connectDiscord(config.discord) : null;
+const discord = config.discord ? await connectDiscord(config.discord, prisma) : null;
 
 const boss = createBoss(config.databaseUrl);
 boss.on("error", (error) => console.error("[pg-boss]", error));
 
 await startBoss(boss);
-await registerWorkers(boss, loggingHandlers, {
+const handlers = createJobHandlers({
+  prisma,
+  dm: discord ? discordDmSender(discord) : null,
+  webUrl: config.webUrl,
+});
+await registerWorkers(boss, handlers, {
   onInvalidPayload: (error, jobId) =>
     console.error(`[jobs] tâche ${jobId} rejetée :`, error.message),
   onHandlerError: (name, error, jobId) =>
@@ -28,17 +42,19 @@ console.log(
   `[bot] workers pg-boss démarrés${discord ? "" : " (sans Discord : variables DISCORD_* absentes)"}.`,
 );
 
+// Discord, puis pg-boss (les tâches en cours peuvent encore utiliser la BDD), puis la BDD.
 const steps: ShutdownStep[] = [];
 if (discord) steps.push({ name: "Discord", run: () => discord.destroy() });
 steps.push({ name: "pg-boss", run: () => boss.stop({ graceful: true, timeout: 10_000 }) });
+steps.push({ name: "Prisma", run: () => prisma.$disconnect() });
 
 const shutdown = createShutdown(steps, { timeoutMs: 15_000, exit: (code) => process.exit(code) });
 process.on("SIGINT", () => void shutdown("SIGINT"));
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
 
-async function connectDiscord(discordConfig: DiscordConfig): Promise<Client> {
+async function connectDiscord(discordConfig: DiscordConfig, db: PrismaClient): Promise<Client> {
   try {
-    return await startDiscord(discordConfig, commands);
+    return await startDiscord(discordConfig, commands, createButtons({ prisma: db }));
   } catch (error) {
     console.error(
       "[bot] Connexion à Discord impossible. Vérifier DISCORD_BOT_TOKEN et DISCORD_APPLICATION_ID dans .env :",

@@ -54,9 +54,10 @@ Le _quoi_ est dans [SPEC.md](SPEC.md). Ce fichier décrit le _comment_.
 
 ### 2. Arrivée d'un testeur
 
-- **Par lien d'invitation** : `/join/[inviteCode]` → OAuth Discord (scopes `identify guilds.join`) → page d'accord → création du `Tester` avec `consentAt` → le bot ajoute le testeur au serveur commun (`guilds.join`) → message privé d'accueil.
-- **Par le serveur du porteur** : le bot publie une annonce avec un bouton « Participer ». Un clic crée le `Tester`, le bot envoie un message privé d'accueil avec un bouton « J'accepte », qui renseigne `consentAt`.
-- Le premier `Assignment` (micro-test n°1) est planifié dès l'accord du testeur.
+- **Par lien d'invitation** : `/join/[inviteCode]` → OAuth Discord (scopes `identify guilds.join`) → page de présentation → création du `Tester` en `INVITED`, **sans** `consentAt` → le bot ajoute le testeur au serveur commun (`guilds.join`) → tâche `send-welcome`.
+- **Par le serveur du porteur** : le bot publie une annonce avec un bouton « Participer ». Un clic crée le `Tester` en `INVITED` → tâche `send-welcome`.
+- **Dans les deux cas**, `send-welcome` envoie le message privé d'accueil avec le bouton « J'accepte de participer ». **Seul ce clic** renseigne `consentAt` et passe le testeur en `ACTIVE` (voir `docs/decisions.md`).
+- Le premier `Assignment` (micro-test n°1, `core.firstAssignment`) est planifié au moment du clic. Un double clic n'en crée qu'un.
 
 ### 3. Envoi, réponse, relance
 
