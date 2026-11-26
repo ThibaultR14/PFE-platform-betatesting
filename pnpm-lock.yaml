@@ -50,6 +50,9 @@ importers:
       '@microbeta/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@microbeta/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@microbeta/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
