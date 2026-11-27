@@ -1,14 +1,15 @@
 import { t } from "@microbeta/i18n";
 import { Client, Events, GatewayIntentBits, REST } from "discord.js";
 import type { DiscordConfig } from "../config";
-import { buttonMap, type BotButton } from "./buttons";
+import { componentMap, type BotComponents } from "./buttons";
 import { commandMap, type BotCommand } from "./commands";
-import { handleButton, handleCommand } from "./interactions";
+import { handleCommand, handleComponent } from "./interactions";
 import { registerCommands } from "./register";
 
 /**
- * `Guilds` seul : les slash commands et les boutons arrivent par les interactions, qui ne
- * demandent aucun intent. Jamais d'intent privilégié (MessageContent, GuildMembers, GuildPresences).
+ * `Guilds` seul : les slash commands, les boutons, les menus et les fenêtres de saisie arrivent par
+ * les interactions, qui ne demandent aucun intent. Jamais d'intent privilégié (MessageContent,
+ * GuildMembers, GuildPresences). Le bot ne reçoit donc pas les messages écrits en privé.
  */
 export const INTENTS = [GatewayIntentBits.Guilds] as const;
 
@@ -19,21 +20,30 @@ export const INTENTS = [GatewayIntentBits.Guilds] as const;
 export async function startDiscord(
   config: DiscordConfig,
   commands: readonly BotCommand[],
-  buttons: readonly BotButton[],
+  createComponents: (client: Client) => BotComponents,
 ): Promise<Client> {
   const byName = commandMap(commands);
-  const byPrefix = buttonMap(buttons);
 
   const rest = new REST().setToken(config.token);
   await registerCommands(rest, config.applicationId, commands);
 
   const client = new Client({ intents: [...INTENTS] });
+  // Les composants ont besoin du client (pour écrire en privé) : créés une fois le client prêt.
+  const components = createComponents(client);
+  const buttons = componentMap(components.buttons);
+  const selects = componentMap(components.selects);
+  const modals = componentMap(components.modals);
   client.once(Events.ClientReady, (ready) => {
     console.log(`[bot] ${t("bot.ready", { tag: ready.user.tag })}`);
   });
   client.on(Events.InteractionCreate, (interaction) => {
     if (interaction.isChatInputCommand()) void handleCommand(interaction, byName);
-    else if (interaction.isButton()) void handleButton(interaction, byPrefix);
+    else if (interaction.isButton()) void handleComponent(interaction, buttons);
+    else if (interaction.isStringSelectMenu()) void handleComponent(interaction, selects);
+    // Seules les fenêtres ouvertes depuis un message : leur envoi modifie ce message.
+    else if (interaction.isModalSubmit() && interaction.isFromMessage()) {
+      void handleComponent(interaction, modals);
+    }
   });
   client.on(Events.Error, (error) => console.error("[discord]", error));
 

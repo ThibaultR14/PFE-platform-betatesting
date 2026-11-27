@@ -240,7 +240,10 @@ describe("send-microtest", () => {
     );
 
     expect(outcome).toBe("sent");
-    expect(send.mock.calls[0]?.[1].components).toEqual([]);
+    // Les boutons de réponse restent, seul le bouton web disparaît.
+    const components = JSON.stringify(send.mock.calls[0]?.[1].components);
+    expect(components).toContain(`ans:${assignment.id}:`);
+    expect(components).not.toContain(WEB_URL);
   });
 
   it("messages privés fermés : testeur UNREACHABLE, ignoré par le tick suivant", async () => {

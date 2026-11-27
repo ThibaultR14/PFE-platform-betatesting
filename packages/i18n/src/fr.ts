@@ -49,19 +49,57 @@ export const fr = {
       title: "📝 **Nouveau micro-test : {title}**",
       durationOne: "Environ {minutes} minutes · 1 question",
       durationMany: "Environ {minutes} minutes · {count} questions",
+      // Le bot ne lit pas les messages écrits en privé (intent Guilds seul) : on le dit.
+      buttonsOnly:
+        "Réponds avec les boutons sous chaque question : je ne lis pas les messages écrits.",
       questionHeader: "**Question {number}/{count}**",
       optional: "(facultative)",
       hint: {
-        TEXT: "Réponse libre.",
-        RATING: "Donne une note de 1 à 5.",
-        YESNO: "Réponds par oui ou par non.",
-        SINGLE: "Un seul choix possible :",
-        MULTI: "Plusieurs choix possibles :",
+        TEXT: "Clique sur « Répondre » pour écrire ta réponse.",
+        RATING: "Choisis une note de 1 à 5 avec les boutons ci-dessous.",
+        YESNO: "Réponds avec les boutons ci-dessous.",
+        SINGLE: "Choisis une seule réponse ci-dessous :",
+        MULTI: "Choisis une ou plusieurs réponses dans le menu ci-dessous :",
       },
       webHint:
         "Tu préfères répondre sur le web, ou joindre une capture d'écran ? Utilise le bouton ci-dessous.",
       // Libellé d'un bouton Discord : 80 caractères max.
       webButton: "Répondre sur le web",
+    },
+    // Réponses aux questions d'un micro-test (boutons, menus et fenêtre de saisie).
+    answer: {
+      // Libellés de boutons : 80 caractères max.
+      yes: "Oui",
+      no: "Non",
+      skip: "Passer",
+      write: "✏️ Répondre",
+      // Texte d'un menu de sélection avant le choix : 150 caractères max.
+      pickOne: "Choisis une réponse",
+      pickMany: "Choisis une ou plusieurs réponses",
+      // Fenêtre de saisie : titre et libellé du champ, 45 caractères max.
+      modalTitle: "Ta réponse",
+      modalLabel: "Écris ta réponse",
+      recorded: "✅ Ta réponse : {value}",
+      rating: "{rating}/5",
+      skipped: "⏭️ Question passée.",
+      stale: "⚠️ Cette question a changé entre-temps : cette version n'est plus valable.",
+      completed: "🎉 Micro-test terminé, merci !",
+      nextIn: "Le prochain arrive dans environ {delay}.",
+      nextSoon: "Le prochain arrive dans quelques instants.",
+      last: "C'était le dernier micro-test de cette campagne. Merci beaucoup pour ton aide !",
+      delay: {
+        hour: "1 heure",
+        hours: "{count} heures",
+        day: "1 jour",
+        days: "{count} jours",
+      },
+      // Réponses éphémères, quand le clic n'enregistre rien.
+      alreadyAnswered: "Tu as déjà répondu à cette question, merci !",
+      alreadyCompleted: "Ce micro-test est déjà terminé, merci !",
+      optedOut: "Tu as quitté cette campagne : ta réponse n'a pas été enregistrée.",
+      notYou: "Ce micro-test ne t'est pas destiné.",
+      unknown: "Ce micro-test n'existe plus.",
+      invalid: "Cette réponse n'est pas valable. Réessaie avec les boutons de la question.",
     },
     errors: {
       unknownCommand:

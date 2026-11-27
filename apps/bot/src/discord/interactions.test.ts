@@ -1,11 +1,16 @@
 import { t } from "@microbeta/i18n";
 import { MessageFlags } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
-import { buttonMap, type BotButton } from "./buttons";
+import { componentMap, type BotButton, type BotModal, type BotSelect } from "./buttons";
 import { commandMap, type BotCommand } from "./commands";
 import { slashCommand } from "./commands/types";
-import { fakeButtonInteraction, fakeInteraction } from "./fake-interaction";
-import { handleButton, handleCommand } from "./interactions";
+import {
+  fakeButtonInteraction,
+  fakeInteraction,
+  fakeModalInteraction,
+  fakeSelectInteraction,
+} from "./fake-interaction";
+import { handleCommand, handleComponent } from "./interactions";
 
 function command(name: string, execute: BotCommand["execute"]): BotCommand {
   return { data: slashCommand(name, "description").toJSON(), execute };
@@ -80,7 +85,7 @@ describe("handleCommand", () => {
   });
 });
 
-describe("handleButton", () => {
+describe("handleComponent", () => {
   const button = (prefix: string, execute: BotButton["execute"]): BotButton => ({
     prefix,
     execute,
@@ -90,9 +95,9 @@ describe("handleButton", () => {
     const consent = vi.fn(async () => {});
     const other = vi.fn(async () => {});
     const { interaction } = fakeButtonInteraction("consent:tester-1");
-    await handleButton(
+    await handleComponent(
       interaction,
-      buttonMap([button("consent", consent), button("autre", other)]),
+      componentMap([button("consent", consent), button("autre", other)]),
     );
     expect(consent).toHaveBeenCalledExactlyOnceWith(interaction, "tester-1");
     expect(other).not.toHaveBeenCalled();
@@ -100,7 +105,7 @@ describe("handleButton", () => {
 
   it("répond à un bouton inconnu", async () => {
     const { interaction, reply } = fakeButtonInteraction("disparu:1");
-    await handleButton(interaction, buttonMap([]));
+    await handleComponent(interaction, componentMap([]));
     expect(reply).toHaveBeenCalledExactlyOnceWith(ephemeral(t("bot.errors.unknownButton")));
   });
 
@@ -108,9 +113,9 @@ describe("handleButton", () => {
     const failure = new Error("boum");
     const logError = vi.fn();
     const { interaction, reply } = fakeButtonInteraction("casse:1");
-    await handleButton(
+    await handleComponent(
       interaction,
-      buttonMap([
+      componentMap([
         button("casse", async () => {
           throw failure;
         }),
@@ -123,6 +128,24 @@ describe("handleButton", () => {
 
   it("refuse deux boutons du même préfixe", () => {
     const noop = async () => {};
-    expect(() => buttonMap([button("x", noop), button("x", noop)])).toThrow("x");
+    expect(() => componentMap([button("x", noop), button("x", noop)])).toThrow("x");
+  });
+
+  it("route aussi les menus de sélection et les fenêtres de saisie par préfixe", async () => {
+    const pick = vi.fn<BotSelect["execute"]>(async () => {});
+    const select = fakeSelectInteraction("pick:a:q:1", ["0", "2"]);
+    await handleComponent(select.interaction, componentMap([{ prefix: "pick", execute: pick }]));
+    expect(pick).toHaveBeenCalledExactlyOnceWith(select.interaction, "a:q:1");
+
+    const submit = vi.fn<BotModal["execute"]>(async () => {});
+    const modal = fakeModalInteraction("textm:a:q:1", { answer: "Super" });
+    await handleComponent(modal.interaction, componentMap([{ prefix: "textm", execute: submit }]));
+    expect(submit).toHaveBeenCalledExactlyOnceWith(modal.interaction, "a:q:1");
+  });
+
+  it("répond à un menu inconnu", async () => {
+    const { interaction, reply } = fakeSelectInteraction("disparu:1", []);
+    await handleComponent(interaction, componentMap<BotSelect>([]));
+    expect(reply).toHaveBeenCalledExactlyOnceWith(ephemeral(t("bot.errors.unknownButton")));
   });
 });

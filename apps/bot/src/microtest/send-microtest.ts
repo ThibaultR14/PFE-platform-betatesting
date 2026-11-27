@@ -1,15 +1,12 @@
-import { isDue, signTesterLink, testerLinkUrl } from "@microbeta/core";
+import { isDue } from "@microbeta/core";
 import type { PrismaClient } from "@microbeta/db";
 import { DmUnavailableError, type DmSender } from "../messaging";
 import { buildMicroTestMessage } from "./message";
+import { testerWebLink, type WebLinkConfig } from "./web-link";
 
-export interface SendMicroTestDeps {
+export interface SendMicroTestDeps extends WebLinkConfig {
   prisma: PrismaClient;
   dm: DmSender;
-  /** URL publique du site : sans elle, pas de lien « Répondre sur le web ». */
-  webUrl: string | null;
-  /** Secret des liens signés : sans lui, pas de lien « Répondre sur le web ». */
-  testerLinkSecret: string | null;
 }
 
 /**
@@ -22,7 +19,8 @@ export type SendMicroTestOutcome =
   "sent" | "unreachable" | "unknownAssignment" | "alreadySent" | "notDue" | "noQuestion";
 
 /**
- * Tâche `send-microtest` : envoie l'intro du micro-test et sa première question au testeur.
+ * Tâche `send-microtest` : envoie l'intro du micro-test et sa première question, avec ses boutons
+ * de réponse, au testeur.
  * Elle peut être rejouée sans doublon : elle relit l'assignment et n'envoie rien s'il n'est plus
  * SCHEDULED, ni si la règle d'envoi (`core.isDue`) ne s'applique plus (testeur en pause entre le
  * tick et l'envoi, campagne en pause…).
@@ -56,15 +54,10 @@ export async function sendMicroTest(
   const [first] = microTest.questions;
   if (!first) return "noQuestion";
 
-  const webLink =
-    webUrl && testerLinkSecret
-      ? testerLinkUrl(
-          webUrl,
-          await signTesterLink({ testerId: tester.id, assignmentId }, testerLinkSecret, now),
-        )
-      : null;
+  const webLink = await testerWebLink({ webUrl, testerLinkSecret }, tester.id, assignmentId, now);
 
   const message = buildMicroTestMessage({
+    assignmentId,
     title: microTest.title,
     instructions: microTest.instructions,
     estimatedMinutes: microTest.estimatedMinutes,

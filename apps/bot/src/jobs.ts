@@ -49,8 +49,11 @@ export function createJobHandlers({
     "scheduler-tick": async () => {
       // Sans Discord, les envois ne peuvent pas aboutir : inutile de remplir la file.
       if (!dm) return;
-      const { due, enqueued } = await schedulerTick({ prisma, jobs });
+      const { skipped, due, enqueued } = await schedulerTick({ prisma, jobs });
       // Silencieux quand il n'y a rien à faire : il tourne chaque minute.
+      if (skipped > 0) {
+        console.log(`[jobs] scheduler-tick : ${skipped} micro-test(s) archivé(s) passé(s).`);
+      }
       if (due > 0) {
         console.log(
           `[jobs] scheduler-tick : ${due} micro-test(s) à envoyer, ${enqueued} placé(s).`,
