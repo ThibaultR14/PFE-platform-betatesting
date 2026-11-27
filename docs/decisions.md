@@ -2,6 +2,21 @@
 
 Les entrées les plus récentes sont en haut.
 
+## 2026-11-27 - Envoi des micro-tests : règle d'envoi, testeur injoignable, lien signé vers le web
+
+- Contexte : issue #24. Le scheduler tourne chaque minute et doit savoir quels micro-tests envoyer. Le message contient un lien vers la page web testeur `/t/[token]`, que le site (#17) devra vérifier.
+- Décision :
+  - la règle d'envoi est `core.isDue` : assignment `SCHEDULED` arrivé à échéance, testeur `ACTIVE` avec `consentAt`, campagne `ACTIVE`, micro-test non archivé. **Rien ne part après la date limite de la campagne**. La requête du scheduler reprend ces conditions (sinon des assignments en attente pour des testeurs en pause rempliraient chaque lot de 100), et `send-microtest` les revérifie au moment d'envoyer ;
+  - `send-microtest` envoie un seul message privé : intro, première question, bouton « Répondre sur le web ». Les boutons de réponse arrivent avec #25 ;
+  - messages privés fermés : le testeur passe **`UNREACHABLE` dès #24**, sinon le scheduler réessaierait chaque minute. #30 ajoute l'email de secours ;
+  - lien signé : JWT HS256 (bibliothèque `jose`), valable 7 jours, `sub` = testerId, `assignmentId`, `aud` = `tester-link`, secret partagé `TESTER_LINK_SECRET` (32 caractères au moins). `signTesterLink`, `verifyTesterLink` et `testerLinkUrl` sont dans `packages/core`, pour que le bot et le site utilisent le même contrat. La page vérifie ensuite l'état de l'assignment. `TESTER_LINK_SECRET` est facultative pour le bot : sans elle, le bouton est omis ;
+  - `packages/core` déclare les types Node (`@types/node`), comme `packages/jobs` : TypeScript 6 ne les inclut plus d'office, et `jose` demande `TextEncoder`.
+- Alternatives écartées :
+  - laisser l'assignment `SCHEDULED` après un refus de Discord : un essai par minute, sans fin ;
+  - marquer l'assignment `SKIPPED` : le testeur resterait `ACTIVE` alors qu'on ne peut plus lui écrire ;
+  - un jeton opaque stocké en base : une table de plus, pour un lien qui n'a besoin que d'être signé et de durer quelques jours ;
+  - envoyer l'intro et la question en deux messages : un échec entre les deux renverrait l'intro au nouvel essai.
+
 ## 2026-11-26 - Accord du testeur uniquement par le bouton Discord
 
 - Contexte : issue #23. Le testeur arrive soit par le lien d'invitation (page web), soit par le serveur du porteur (bouton « Participer »). Il faut un seul point où l'accord est enregistré.

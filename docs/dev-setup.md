@@ -69,18 +69,18 @@ Pour s'y retrouver, on nomme les trois de la même façon :
 
 ## 5. Remplir `.env`
 
-| Variable                                                              | Où la trouver                                                              | Quand                                                                                                      |
-| --------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`, `TEST_DATABASE_URL`                                   | déjà bonnes dans `.env.example`                                            | maintenant                                                                                                 |
-| `AUTH_SECRET`                                                         | `openssl rand -base64 32` (ou n'importe quelle chaîne longue et aléatoire) | avec la connexion (#5)                                                                                     |
-| `AUTH_URL`                                                            | déjà bonne (`http://localhost:3000`)                                       | —                                                                                                          |
-| `AUTH_DISCORD_ID`, `AUTH_DISCORD_SECRET`                              | étape 3.4                                                                  | avec la connexion (#5)                                                                                     |
-| `DISCORD_BOT_TOKEN`, `DISCORD_APPLICATION_ID`, `DISCORD_HUB_GUILD_ID` | étapes 3 et 4                                                              | avec la connexion du bot (#22). **Toutes ou aucune** : le bot refuse de démarrer s'il n'en a qu'une partie |
-| `PUBLIC_WEB_URL`                                                      | déjà bonne (`http://localhost:3000`)                                       | facultative : sans elle, les messages du bot n'ont pas de lien de confidentialité                          |
-| `STRIPE_*`                                                            | dashboard Stripe en mode test                                              | avec les paiements (#18)                                                                                   |
-| `ANTHROPIC_API_KEY`                                                   | console Anthropic                                                          | avec la génération IA (#9)                                                                                 |
-| `TESTER_LINK_SECRET`                                                  | chaîne longue et aléatoire, comme `AUTH_SECRET`                            | avec la page web testeur (#17)                                                                             |
-| `RESEND_API_KEY`, `EMAIL_FROM`                                        | dashboard Resend                                                           | avec l'email de secours (#30)                                                                              |
+| Variable                                                              | Où la trouver                                                                      | Quand                                                                                                                             |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`, `TEST_DATABASE_URL`                                   | déjà bonnes dans `.env.example`                                                    | maintenant                                                                                                                        |
+| `AUTH_SECRET`                                                         | `openssl rand -base64 32` (ou n'importe quelle chaîne longue et aléatoire)         | avec la connexion (#5)                                                                                                            |
+| `AUTH_URL`                                                            | déjà bonne (`http://localhost:3000`)                                               | —                                                                                                                                 |
+| `AUTH_DISCORD_ID`, `AUTH_DISCORD_SECRET`                              | étape 3.4                                                                          | avec la connexion (#5)                                                                                                            |
+| `DISCORD_BOT_TOKEN`, `DISCORD_APPLICATION_ID`, `DISCORD_HUB_GUILD_ID` | étapes 3 et 4                                                                      | avec la connexion du bot (#22). **Toutes ou aucune** : le bot refuse de démarrer s'il n'en a qu'une partie                        |
+| `PUBLIC_WEB_URL`                                                      | déjà bonne (`http://localhost:3000`)                                               | facultative : sans elle, les messages du bot n'ont pas de lien de confidentialité                                                 |
+| `STRIPE_*`                                                            | dashboard Stripe en mode test                                                      | avec les paiements (#18)                                                                                                          |
+| `ANTHROPIC_API_KEY`                                                   | console Anthropic                                                                  | avec la génération IA (#9)                                                                                                        |
+| `TESTER_LINK_SECRET`                                                  | `openssl rand -base64 32` (32 caractères au moins), la même pour le site et le bot | facultative pour le bot : sans elle, les micro-tests n'ont pas de bouton « Répondre sur le web ». Le site en aura besoin avec #17 |
+| `RESEND_API_KEY`, `EMAIL_FROM`                                        | dashboard Resend                                                                   | avec l'email de secours (#30)                                                                                                     |
 
 Les variables vides sont ignorées tant que la fonctionnalité qui en a besoin n'existe pas.
 
@@ -120,6 +120,16 @@ pnpm --filter @microbeta/bot welcome:test <ton Discord ID> --reset
 - Le bot t'envoie en privé le message d'accueil de la campagne de démo, avec le bouton « J'accepte de participer ».
 - Au clic, le bouton disparaît et une confirmation s'ajoute au message. Dans `pnpm db:studio`, ton testeur (« Testeur manuel ») passe `ACTIVE`, avec un `Assignment` `SCHEDULED`.
 - Relancé **sans** `--reset`, le script ne provoque aucun second message (log `notInvited` ou `alreadySent`).
+
+### Tester l'envoi d'un micro-test
+
+Suite du test précédent : après le clic sur « J'accepte », le scheduler (une fois par minute) envoie le micro-test n° 1.
+
+- Dans la minute, le bot t'envoie en privé l'intro du micro-test et sa première question. Le terminal du bot affiche `[jobs] scheduler-tick : 1 micro-test(s) à envoyer, 1 placé(s).` puis `[jobs] send-microtest … : sent`.
+- Avec `TESTER_LINK_SECRET` dans `.env`, le message porte un bouton « Répondre sur le web ». La page `/t/…` n'existe pas encore (#17) : le lien mène à une 404, c'est normal.
+- Dans `pnpm db:studio` : l'`Assignment` passe `SENT` (avec `sentAt`), et un `OutboundMessage` `MICROTEST` / `SENT` apparaît.
+- Redémarre le bot : aucun second message.
+- Pour recommencer depuis le début : `welcome:test` avec `--reset`.
 
 Autres commandes utiles : `pnpm db:studio` (parcourir la base dans le navigateur), `pnpm --filter @microbeta/web dev` (le site seul).
 

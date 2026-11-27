@@ -16,6 +16,11 @@ if (!config.webUrl) {
     "[bot] PUBLIC_WEB_URL absente : les messages aux testeurs n'auront pas de lien vers le site (confidentialité…).",
   );
 }
+if (!config.testerLinkSecret) {
+  console.warn(
+    "[bot] TESTER_LINK_SECRET absente : les micro-tests n'auront pas de bouton « Répondre sur le web ».",
+  );
+}
 
 const prisma = createPrismaClient(config.databaseUrl);
 
@@ -29,7 +34,9 @@ await startBoss(boss);
 const handlers = createJobHandlers({
   prisma,
   dm: discord ? discordDmSender(discord) : null,
+  jobs: boss,
   webUrl: config.webUrl,
+  testerLinkSecret: config.testerLinkSecret,
 });
 await registerWorkers(boss, handlers, {
   onInvalidPayload: (error, jobId) =>

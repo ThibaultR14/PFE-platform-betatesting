@@ -61,8 +61,9 @@ Le _quoi_ est dans [SPEC.md](SPEC.md). Ce fichier décrit le _comment_.
 
 ### 3. Envoi, réponse, relance
 
-- **Le scheduler** (cron pg-boss, toutes les minutes) sélectionne les `Assignment` à envoyer (`SCHEDULED` et `scheduledAt <= now`), et ceux à relancer d'après `core.reminders.nextAction(assignment, campaign, now)`.
-- **`send-microtest`** envoie l'intro et la première question (boutons pour les notes et les choix, fenêtre de saisie pour le texte), plus le lien vers la page web.
+- **Le scheduler** (cron pg-boss, toutes les minutes) sélectionne les `Assignment` à envoyer d'après `core.isDue` (`SCHEDULED` et `scheduledAt <= now`, testeur `ACTIVE` avec accord, campagne `ACTIVE` avant sa date limite, micro-test non archivé), 100 au plus par tick, et place une tâche `send-microtest` pour chacun. Il sélectionnera aussi ceux à relancer d'après `core.reminders.nextAction(assignment, campaign, now)` (#26).
+- **`send-microtest`** revérifie `core.isDue`, puis envoie un seul message privé : l'intro et la première question (boutons pour les notes et les choix, fenêtre de saisie pour le texte, avec #25), plus le bouton « Répondre sur le web ». L'assignment passe `SENT`.
+- **Lien vers la page web** : `${PUBLIC_WEB_URL}/t/<jeton>`. Le jeton est un JWT HS256 signé avec `TESTER_LINK_SECRET` (partagé par le site et le bot), valable 7 jours, qui désigne un testeur et un assignment. `core.signTesterLink` le crée côté bot, `core.verifyTesterLink` le vérifie côté site (expiré, modifié ou signé pour un autre usage → refusé). La page vérifie ensuite l'état de l'assignment.
 - **Chaque réponse** (interaction Discord ou envoi du formulaire web) crée une `Answer` avec `questionSnapshot`, puis passe à la question suivante (`currentQuestionIdx`).
 - **Quand le micro-test est fini** : `COMPLETED`, et l'`Assignment` suivant est créé avec `scheduledAt = completedAt + cadenceHours`.
 - **Relances** : une au bout de `reminder1Hours`, une au bout de `reminder2Hours`, puis le testeur passe `INACTIVE`.

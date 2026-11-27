@@ -1,3 +1,5 @@
+import { assertTesterLinkSecret } from "@microbeta/core";
+
 export interface DiscordConfig {
   token: string;
   applicationId: string;
@@ -13,6 +15,11 @@ export interface BotConfig {
    * (page de confidentialité…). `null` si elle n'est pas renseignée : les liens sont alors omis.
    */
   webUrl: string | null;
+  /**
+   * Secret partagé avec le site pour signer les liens vers la page web testeur
+   * (`TESTER_LINK_SECRET`). `null` s'il n'est pas renseigné : le lien « Répondre sur le web » est omis.
+   */
+  testerLinkSecret: string | null;
 }
 
 const DISCORD_VARS = {
@@ -33,10 +40,11 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   }
 
   const webUrl = parseWebUrl(env.PUBLIC_WEB_URL);
+  const testerLinkSecret = parseTesterLinkSecret(env.TESTER_LINK_SECRET);
 
   const missing = Object.values(DISCORD_VARS).filter((name) => !env[name]);
   if (missing.length === Object.keys(DISCORD_VARS).length) {
-    return { databaseUrl, discord: null, webUrl };
+    return { databaseUrl, discord: null, webUrl, testerLinkSecret };
   }
   if (missing.length > 0) {
     throw new Error(`Variables d'environnement manquantes : ${missing.join(", ")}`);
@@ -50,6 +58,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       hubGuildId: env[DISCORD_VARS.hubGuildId] ?? "",
     },
     webUrl,
+    testerLinkSecret,
   };
 }
 
@@ -66,4 +75,11 @@ function parseWebUrl(value: string | undefined): string | null {
     throw new Error(`PUBLIC_WEB_URL doit commencer par http:// ou https:// : "${value}"`);
   }
   return value.replace(/\/+$/, "");
+}
+
+/** Une valeur vide vaut `null`. Un secret trop court est une erreur, pas un lien désactivé en silence. */
+function parseTesterLinkSecret(value: string | undefined): string | null {
+  if (!value) return null;
+  assertTesterLinkSecret(value);
+  return value;
 }
