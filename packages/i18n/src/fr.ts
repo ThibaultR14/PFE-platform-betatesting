@@ -44,6 +44,25 @@ export const fr = {
       notYou: "Cette invitation ne t'est pas destinée.",
       unknownTester: "Cette invitation n'existe plus.",
     },
+    // Message privé d'un micro-test : intro et première question (tâche send-microtest).
+    microtest: {
+      title: "📝 **Nouveau micro-test : {title}**",
+      durationOne: "Environ {minutes} minutes · 1 question",
+      durationMany: "Environ {minutes} minutes · {count} questions",
+      questionHeader: "**Question {number}/{count}**",
+      optional: "(facultative)",
+      hint: {
+        TEXT: "Réponse libre.",
+        RATING: "Donne une note de 1 à 5.",
+        YESNO: "Réponds par oui ou par non.",
+        SINGLE: "Un seul choix possible :",
+        MULTI: "Plusieurs choix possibles :",
+      },
+      webHint:
+        "Tu préfères répondre sur le web, ou joindre une capture d'écran ? Utilise le bouton ci-dessous.",
+      // Libellé d'un bouton Discord : 80 caractères max.
+      webButton: "Répondre sur le web",
+    },
     errors: {
       unknownCommand:
         "Cette commande n'existe plus. Tape `/aide` pour voir celles qui sont disponibles.",

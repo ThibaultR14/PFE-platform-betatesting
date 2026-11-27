@@ -15,11 +15,17 @@ describe("loadConfig", () => {
       databaseUrl: DB.DATABASE_URL,
       discord: { token: "token", applicationId: "app", hubGuildId: "guild" },
       webUrl: null,
+      testerLinkSecret: null,
     });
   });
 
   it("démarre sans Discord si aucune variable Discord n'est renseignée", () => {
-    expect(loadConfig(DB)).toEqual({ databaseUrl: DB.DATABASE_URL, discord: null, webUrl: null });
+    expect(loadConfig(DB)).toEqual({
+      databaseUrl: DB.DATABASE_URL,
+      discord: null,
+      webUrl: null,
+      testerLinkSecret: null,
+    });
   });
 
   it("exige DATABASE_URL", () => {
@@ -43,5 +49,15 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ ...DB, PUBLIC_WEB_URL: "ftp://microbeta.app" })).toThrow(
       "PUBLIC_WEB_URL",
     );
+  });
+
+  it("lit TESTER_LINK_SECRET, facultative", () => {
+    const secret = "s".repeat(32);
+    expect(loadConfig({ ...DB, TESTER_LINK_SECRET: secret }).testerLinkSecret).toBe(secret);
+    expect(loadConfig({ ...DB, TESTER_LINK_SECRET: "" }).testerLinkSecret).toBeNull();
+  });
+
+  it("refuse un TESTER_LINK_SECRET trop court", () => {
+    expect(() => loadConfig({ ...DB, TESTER_LINK_SECRET: "court" })).toThrow("TESTER_LINK_SECRET");
   });
 });
