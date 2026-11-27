@@ -2,7 +2,7 @@ import { createPrismaClient, type PrismaClient } from "@microbeta/db";
 import { createBoss, registerWorkers, scheduleTick, startBoss } from "@microbeta/jobs";
 import type { Client } from "discord.js";
 import { loadConfig, type DiscordConfig } from "./config";
-import { createButtons } from "./discord/buttons";
+import { createComponents } from "./discord/buttons";
 import { startDiscord } from "./discord/client";
 import { commands } from "./discord/commands";
 import { discordDmSender } from "./discord/dm";
@@ -61,7 +61,14 @@ process.on("SIGTERM", () => void shutdown("SIGTERM"));
 
 async function connectDiscord(discordConfig: DiscordConfig, db: PrismaClient): Promise<Client> {
   try {
-    return await startDiscord(discordConfig, commands, createButtons({ prisma: db }));
+    return await startDiscord(discordConfig, commands, (client) =>
+      createComponents({
+        prisma: db,
+        dm: discordDmSender(client),
+        webUrl: config.webUrl,
+        testerLinkSecret: config.testerLinkSecret,
+      }),
+    );
   } catch (error) {
     console.error(
       "[bot] Connexion à Discord impossible. Vérifier DISCORD_BOT_TOKEN et DISCORD_APPLICATION_ID dans .env :",

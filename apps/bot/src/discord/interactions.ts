@@ -1,5 +1,5 @@
 import { t } from "@microbeta/i18n";
-import type { BotButton, ButtonInteraction } from "./buttons";
+import type { ComponentHandler, ComponentInteraction } from "./buttons";
 import { parseCustomId } from "./buttons/custom-id";
 import type { BotCommand, CommandInteraction, EphemeralReply } from "./commands";
 import { ephemeral } from "./commands/types";
@@ -69,22 +69,23 @@ export async function handleCommand(
 }
 
 /**
- * Exécute le bouton cliqué, choisi par le préfixe de son `customId`.
- * - Bouton inconnu (par ex. sur un ancien message) : réponse éphémère.
- * - Erreur dans le bouton : loguée, et l'utilisateur reçoit un message générique.
+ * Exécute le composant utilisé (bouton, menu de sélection ou fenêtre de saisie), choisi par le
+ * préfixe de son `customId`.
+ * - Composant inconnu (par ex. sur un ancien message) : réponse éphémère.
+ * - Erreur dans le handler : loguée, et l'utilisateur reçoit un message générique.
  */
-export async function handleButton(
-  interaction: ButtonInteraction,
-  buttons: ReadonlyMap<string, BotButton>,
+export async function handleComponent<I extends ComponentInteraction>(
+  interaction: I,
+  handlers: ReadonlyMap<string, ComponentHandler<I>>,
   logError: LogError = defaultLogError,
 ): Promise<void> {
   const { prefix, arg } = parseCustomId(interaction.customId);
-  const button = buttons.get(prefix);
-  await safely(interaction, `le bouton ${interaction.customId}`, logError, async () => {
-    if (!button) {
+  const handler = handlers.get(prefix);
+  await safely(interaction, `le composant ${interaction.customId}`, logError, async () => {
+    if (!handler) {
       await respond(interaction, t("bot.errors.unknownButton"));
       return;
     }
-    await button.execute(interaction, arg);
+    await handler.execute(interaction, arg);
   });
 }

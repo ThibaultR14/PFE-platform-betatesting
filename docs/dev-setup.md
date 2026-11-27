@@ -129,7 +129,17 @@ Suite du test précédent : après le clic sur « J'accepte », le scheduler (un
 - Avec `TESTER_LINK_SECRET` dans `.env`, le message porte un bouton « Répondre sur le web ». La page `/t/…` n'existe pas encore (#17) : le lien mène à une 404, c'est normal.
 - Dans `pnpm db:studio` : l'`Assignment` passe `SENT` (avec `sentAt`), et un `OutboundMessage` `MICROTEST` / `SENT` apparaît.
 - Redémarre le bot : aucun second message.
-- Pour recommencer depuis le début : `welcome:test` avec `--reset`.
+- Pour recommencer depuis le début : `welcome:test` avec `--reset` (ses réponses sont supprimées avec ses assignments).
+
+### Tester les réponses dans la conversation
+
+Suite du test précédent. Le micro-test n° 1 de la démo contient une note, un texte libre, un oui/non et un choix unique.
+
+- Réponds aux 4 questions avec les boutons (« ✏️ Répondre » ouvre une fenêtre de saisie pour le texte). À chaque réponse, le message de la question perd ses boutons et affiche « ✅ Ta réponse : … », puis la question suivante arrive dans un nouveau message.
+- Après la dernière : « 🎉 Micro-test terminé, merci ! » et « Le prochain arrive dans environ 2 jours ».
+- Si Discord affiche encore un ancien bouton, un nouveau clic donne une réponse visible par toi seul, et rien ne change.
+- Dans `pnpm db:studio` : 4 `Answer` (`channel` `DISCORD`, avec `questionSnapshot`), l'`Assignment` n° 1 `COMPLETED`, et un `Assignment` `SCHEDULED` pour le micro-test n° 2, 48 h plus tard.
+- Pour recevoir le micro-test n° 2 sans attendre, avance son `scheduledAt` dans `db:studio` : il arrive dans la minute. Sa première question est un choix multiple (menu de sélection).
 
 Autres commandes utiles : `pnpm db:studio` (parcourir la base dans le navigateur), `pnpm --filter @microbeta/web dev` (le site seul).
 

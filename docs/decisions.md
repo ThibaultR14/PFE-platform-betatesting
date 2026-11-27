@@ -2,6 +2,26 @@
 
 Les entrées les plus récentes sont en haut.
 
+## 2026-11-27 - Réponses dans la conversation : question passée, pause, version, micro-tests archivés
+
+- Contexte : issue #25. Le testeur répond question par question avec des boutons, des menus et une fenêtre de saisie. Le corpus peut changer pendant la campagne, et la page web (#17) écrira dans la même table `Answer`.
+- Décision :
+  - **une question facultative passée crée une `Answer` dont `value` vaut `null`**. La question suivante est la première question active sans `Answer`, ce qui résiste aux réponses venues du web et aux questions ajoutées ou archivées. Contrat pour #14, #15 et #17 : ignorer `null` dans les statistiques, case vide dans le CSV, `null` pour une question facultative laissée vide sur la page web ;
+  - **un testeur en pause peut finir le micro-test en cours** : la pause bloque seulement les envois suivants. Après `/stop` (`OPTED_OUT`), les réponses sont refusées ;
+  - **le `customId` porte la version de la question** : si le porteur la modifie entre l'envoi et le clic, rien n'est enregistré et la version à jour est reposée. Sinon la réponse serait enregistrée avec une copie de la question qui ne correspond pas à ce que le testeur a vu ;
+  - les choix voyagent par leur numéro (limite de 100 caractères des `customId`), traduit en texte avec `core.questionOptions`, la même liste que celle affichée. `Answer.value` garde le texte du choix ;
+  - un choix unique a un bouton par choix jusqu'à 5 choix, au-delà un menu de sélection ;
+  - chaque question suivante part dans un nouveau message privé (par le `DmSender`, comme l'intro), et l'ancien perd ses boutons et rappelle la réponse ;
+  - `recordAnswer` verrouille l'assignment (`SELECT … FOR UPDATE`) : deux réponses simultanées ne peuvent pas laisser le micro-test ouvert ;
+  - un assignment `SCHEDULED` dont le micro-test est archivé passe `SKIPPED` au tick suivant, et le micro-test suivant est planifié à la même date. Sinon le testeur ne recevrait plus rien ;
+  - le micro-test suivant est le premier micro-test actif sans assignment pour ce testeur (pas « position + 1 ») : un micro-test ajouté en cours de campagne est envoyé aussi.
+- Alternatives écartées :
+  - pas d'`Answer` pour une question passée, et suivre la progression avec `currentQuestionIdx` seul : on se tromperait de question dès que le corpus change ou qu'une réponse arrive du web ;
+  - un seul message modifié à chaque question : on perd l'historique des réponses dans la conversation ;
+  - envoyer la question suivante en suite de l'interaction (`followUp`) : Discord l'affiche comme une réponse au message précédent, avec un aperçu qui répète la question d'avant (vu au test manuel) ;
+  - lire les messages écrits (« 3 » tapé en privé) : il faudrait l'intent `DirectMessages` et deviner à quelle question le message répond. La SPEC exclut la compréhension des messages libres ;
+  - `deferUpdate` avant chaque traitement : impossible pour le bouton qui ouvre la fenêtre de saisie, et inutile pour un traitement de quelques requêtes.
+
 ## 2026-11-27 - Envoi des micro-tests : règle d'envoi, testeur injoignable, lien signé vers le web
 
 - Contexte : issue #24. Le scheduler tourne chaque minute et doit savoir quels micro-tests envoyer. Le message contient un lien vers la page web testeur `/t/[token]`, que le site (#17) devra vérifier.
