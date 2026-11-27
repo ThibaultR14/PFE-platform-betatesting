@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  beforeDeadline,
   firstAssignment,
   isDue,
+  nextAssignment,
   selectDue,
   type DueCandidate,
   type SchedulableMicroTest,
@@ -45,6 +47,50 @@ describe("firstAssignment", () => {
   it("ne partage pas l'objet Date reçu", () => {
     const planned = firstAssignment([mt("a", 0)], consentAt);
     expect(planned?.scheduledAt).not.toBe(consentAt);
+  });
+});
+
+describe("nextAssignment", () => {
+  const completedAt = new Date("2026-11-27T12:00:00Z");
+  const microTests = [mt("c", 2), mt("a", 0), mt("b", 1)];
+
+  it("planifie le micro-test suivant, `cadenceHours` après la fin du précédent", () => {
+    expect(nextAssignment(microTests, new Set(["a"]), completedAt, 48)).toEqual({
+      microTestId: "b",
+      scheduledAt: new Date("2026-11-29T12:00:00Z"),
+    });
+  });
+
+  it("dernier micro-test terminé : aucun assignment", () => {
+    expect(nextAssignment(microTests, new Set(["a", "b", "c"]), completedAt, 48)).toBeNull();
+  });
+
+  it("saute les micro-tests archivés", () => {
+    const withArchived = [mt("a", 0), mt("b", 1, completedAt), mt("c", 2)];
+    expect(nextAssignment(withArchived, new Set(["a"]), completedAt, 48)?.microTestId).toBe("c");
+    const onlyArchivedLeft = [mt("a", 0), mt("b", 1, completedAt)];
+    expect(nextAssignment(onlyArchivedLeft, new Set(["a"]), completedAt, 48)).toBeNull();
+  });
+
+  it("envoie aussi un micro-test ajouté avant ceux déjà faits", () => {
+    const added = [...microTests, mt("new", -1)];
+    expect(nextAssignment(added, new Set(["a", "b"]), completedAt, 48)?.microTestId).toBe("new");
+  });
+
+  it("rythme de 0 h : planifié tout de suite, sans partager l'objet Date reçu", () => {
+    const planned = nextAssignment(microTests, new Set(), completedAt, 0);
+    expect(planned?.scheduledAt).toEqual(completedAt);
+    expect(planned?.scheduledAt).not.toBe(completedAt);
+  });
+});
+
+describe("beforeDeadline", () => {
+  const deadline = new Date("2026-12-01T00:00:00Z");
+
+  it("vrai sans date limite, ou strictement avant", () => {
+    expect(beforeDeadline(null, deadline)).toBe(true);
+    expect(beforeDeadline(deadline, new Date("2026-11-30T23:59:59Z"))).toBe(true);
+    expect(beforeDeadline(deadline, deadline)).toBe(false);
   });
 });
 

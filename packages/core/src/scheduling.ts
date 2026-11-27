@@ -1,13 +1,24 @@
+import { activeInOrder, type Ordered } from "./order";
+import { addHours } from "./time";
+
 /** Ce que la planification a besoin de savoir d'un micro-test. */
-export interface SchedulableMicroTest {
-  id: string;
-  position: number;
-  archivedAt: Date | null;
-}
+export type SchedulableMicroTest = Ordered;
 
 export interface PlannedAssignment {
   microTestId: string;
   scheduledAt: Date;
+}
+
+/**
+ * Prochain micro-test d'un testeur : le premier micro-test non archivé (ordre `position`, puis
+ * `id`) qui n'a pas encore d'assignment pour lui. Un micro-test ajouté en cours de campagne, même
+ * avant ceux déjà faits, est donc envoyé aussi. `null` quand il n'en reste plus.
+ */
+export function nextMicroTest<T extends SchedulableMicroTest>(
+  microTests: readonly T[],
+  assignedMicroTestIds: ReadonlySet<string>,
+): T | null {
+  return activeInOrder(microTests).find((mt) => !assignedMicroTestIds.has(mt.id)) ?? null;
 }
 
 /**
@@ -19,12 +30,27 @@ export function firstAssignment(
   microTests: readonly SchedulableMicroTest[],
   consentAt: Date,
 ): PlannedAssignment | null {
-  const first = microTests
-    .filter((mt) => mt.archivedAt === null)
-    // À position égale, l'id départage : le résultat ne dépend pas de l'ordre reçu.
-    .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id))[0];
-  if (!first) return null;
-  return { microTestId: first.id, scheduledAt: new Date(consentAt.getTime()) };
+  return nextAssignment(microTests, new Set(), consentAt, 0);
+}
+
+/**
+ * Assignment suivant, quand un micro-test vient d'être terminé (ou passé) : le prochain
+ * micro-test (`nextMicroTest`), planifié `cadenceHours` après `from`. `null` après le dernier.
+ */
+export function nextAssignment(
+  microTests: readonly SchedulableMicroTest[],
+  assignedMicroTestIds: ReadonlySet<string>,
+  from: Date,
+  cadenceHours: number,
+): PlannedAssignment | null {
+  const next = nextMicroTest(microTests, assignedMicroTestIds);
+  if (!next) return null;
+  return { microTestId: next.id, scheduledAt: addHours(from, cadenceHours) };
+}
+
+/** Vrai si `date` tombe avant la date limite de la campagne (ou s'il n'y en a pas). */
+export function beforeDeadline(deadline: Date | null, date: Date): boolean {
+  return deadline === null || date.getTime() < deadline.getTime();
 }
 
 /** Seul statut de testeur à qui l'on envoie un micro-test (accord donné, ni en pause ni parti). */
@@ -56,7 +82,7 @@ export function isDue(candidate: DueCandidate, now: Date): boolean {
     tester.status === SENDABLE_TESTER_STATUS &&
     tester.consentAt !== null &&
     campaign.status === SENDABLE_CAMPAIGN_STATUS &&
-    (campaign.deadline === null || campaign.deadline.getTime() > now.getTime()) &&
+    beforeDeadline(campaign.deadline, now) &&
     microTest.archivedAt === null
   );
 }
